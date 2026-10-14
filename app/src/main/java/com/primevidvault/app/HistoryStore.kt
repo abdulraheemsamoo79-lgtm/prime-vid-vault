@@ -16,7 +16,6 @@ data class HistoryItem(
 object HistoryStore {
     private const val PREFS = "prime_vid_vault"
     private const val KEY_HISTORY = "history"
-    private const val KEY_PERMISSION = "media_permission_granted"
 
     fun load(context: Context): MutableList<HistoryItem> {
         val list = mutableListOf<HistoryItem>()
@@ -69,12 +68,4 @@ object HistoryStore {
             .edit().putString(KEY_HISTORY, arr.toString()).apply()
     }
 
-    fun isPermissionGranted(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_PERMISSION, false)
-
-    fun setPermissionGranted(context: Context, granted: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_PERMISSION, granted).apply()
-    }
 }

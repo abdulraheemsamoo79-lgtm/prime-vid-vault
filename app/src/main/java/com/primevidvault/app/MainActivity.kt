@@ -14,6 +14,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -33,6 +36,9 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
+        private const val PREFS = "prime_vid_vault"
+        private const val KEY_PERMISSION_PROMPTED = "permission_prompted"
+        private const val KEY_PERMISSION_REQUESTED_BEFORE = "permission_requested_before"
     }
 
     private lateinit var etLink: EditText
@@ -44,14 +50,27 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivCover: ImageView
     private lateinit var tvTitle: TextView
     private lateinit var tvAuthor: TextView
-    private lateinit var tvStats: TextView
+    private lateinit var tvStatViews: TextView
+    private lateinit var tvStatLikes: TextView
+    private lateinit var tvStatComments: TextView
+    private lateinit var tvStatShares: TextView
     private lateinit var rvHistory: RecyclerView
     private lateinit var btnClearHistory: Button
+    private lateinit var tvPermissionStatus: TextView
+    private lateinit var btnPermissionFix: Button
+    private lateinit var statusCard: View
+    private lateinit var tvDownloadFile: TextView
+    private lateinit var downloadProgress: ProgressBar
+    private lateinit var tvDownloadStatus: TextView
+    private lateinit var btnOpenDownloads: Button
+    private lateinit var btnRetryDownload: Button
 
     private var currentVideo: VideoInfo? = null
     private var pendingDownload: PendingDownload? = null
     private var pendingDownloadId: Long = -1L
     private lateinit var historyAdapter: HistoryAdapter
+    private val progressHandler = Handler(Looper.getMainLooper())
+    private var progressRunnable: Runnable? = null
 
     private data class PendingDownload(
         val url: String,
@@ -80,9 +99,20 @@ class MainActivity : AppCompatActivity() {
         ivCover = findViewById(R.id.ivCover)
         tvTitle = findViewById(R.id.tvTitle)
         tvAuthor = findViewById(R.id.tvAuthor)
-        tvStats = findViewById(R.id.tvStats)
+        tvStatViews = findViewById(R.id.tvStatViews)
+        tvStatLikes = findViewById(R.id.tvStatLikes)
+        tvStatComments = findViewById(R.id.tvStatComments)
+        tvStatShares = findViewById(R.id.tvStatShares)
         rvHistory = findViewById(R.id.rvHistory)
         btnClearHistory = findViewById(R.id.btnClearHistory)
+        tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
+        btnPermissionFix = findViewById(R.id.btnPermissionFix)
+        statusCard = findViewById(R.id.statusCard)
+        tvDownloadFile = findViewById(R.id.tvDownloadFile)
+        downloadProgress = findViewById(R.id.downloadProgress)
+        tvDownloadStatus = findViewById(R.id.tvDownloadStatus)
+        btnOpenDownloads = findViewById(R.id.btnOpenDownloads)
+        btnRetryDownload = findViewById(R.id.btnRetryDownload)
 
         historyAdapter = HistoryAdapter(
             HistoryStore.load(this),
@@ -108,6 +138,9 @@ class MainActivity : AppCompatActivity() {
             refreshHistory()
             Toast.makeText(this, "History clear ho gayi", Toast.LENGTH_SHORT).show()
         }
+        btnPermissionFix.setOnClickListener { handlePermissionButton() }
+        btnOpenDownloads.setOnClickListener { openDownloads() }
+        btnRetryDownload.setOnClickListener { retryDownload() }
 
         findViewById<Button>(R.id.btnNoWmHd).setOnClickListener {
             startDownloadFlow(currentVideo?.hdPlayUrl, "mp4", "No-Watermark HD", "Video")
@@ -133,17 +166,152 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(downloadReceiver, filter)
         }
 
+        updatePermissionUi()
+        maybePromptPermissionOnFirstLaunch()
         autofillFromClipboard()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh after returning from system Settings.
+        updatePermissionUi()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        stopProgressPolling()
         try {
             unregisterReceiver(downloadReceiver)
         } catch (e: Exception) {
             // Already unregistered
         }
     }
+
+    // ---------- Permissions ----------
+
+    private fun prefs() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun mediaPermission(): String =
+        if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_VIDEO
+        else Manifest.permission.WRITE_EXTERNAL_STORAGE
+
+    private fun isPermissionGranted(): Boolean {
+        return ContextCompat.checkSelfPermission(this, mediaPermission()) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun isPermanentlyDenied(): Boolean {
+        val requestedBefore = prefs().getBoolean(KEY_PERMISSION_REQUESTED_BEFORE, false)
+        return requestedBefore &&
+            !isPermissionGranted() &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(this, mediaPermission())
+    }
+
+    private fun maybePromptPermissionOnFirstLaunch() {
+        val p = prefs()
+        if (p.getBoolean(KEY_PERMISSION_PROMPTED, false)) return
+        p.edit().putBoolean(KEY_PERMISSION_PROMPTED, true).apply()
+        showPermissionExplainer()
+    }
+
+    private fun showPermissionExplainer() {
+        AlertDialog.Builder(this)
+            .setTitle("Permission chahiye")
+            .setMessage(
+                "Videos ko Gallery me save karne ke liye PRIME VID VAULT ko " +
+                    "photos/videos ka access chahiye. Allow karne par downloads " +
+                    "seedha Gallery me save hongi aur download notifications bhi milengi."
+            )
+            .setPositiveButton("Allow") { _, _ -> requestSystemPermissions() }
+            .setNegativeButton("Baad me") { _, _ -> updatePermissionUi() }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun handlePermissionButton() {
+        if (isPermissionGranted()) {
+            Toast.makeText(this, "Permissions pehle se allowed hain", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isPermanentlyDenied()) {
+            showGoToSettingsDialog()
+        } else {
+            showPermissionExplainer()
+        }
+    }
+
+    private fun requestSystemPermissions() {
+        prefs().edit().putBoolean(KEY_PERMISSION_REQUESTED_BEFORE, true).apply()
+        val perms = mutableListOf(mediaPermission())
+        if (Build.VERSION.SDK_INT >= 33) {
+            // Needed so download-complete notifications are visible on Android 13+.
+            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        ActivityCompat.requestPermissions(this, perms.toTypedArray(), PERMISSION_REQUEST_CODE)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            val mediaIdx = permissions.indexOf(mediaPermission())
+            val mediaGranted = mediaIdx >= 0 &&
+                grantResults.getOrNull(mediaIdx) == PackageManager.PERMISSION_GRANTED
+            updatePermissionUi()
+            if (mediaGranted) {
+                Toast.makeText(this, "Permission allowed", Toast.LENGTH_SHORT).show()
+                startDownload()
+            } else {
+                if (isPermanentlyDenied()) {
+                    showGoToSettingsDialog()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Permission deny hui - download nahi hoga",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    private fun showGoToSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Permission Settings se allow karo")
+            .setMessage(
+                "Permission permanently deny ho gayi hai, isliye popup dobara " +
+                    "nahi aayega. App Settings → Permissions me jaake " +
+                    "Photos/Videos ko Allow karo."
+            )
+            .setPositiveButton("Settings Kholo") { _, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = Uri.fromParts("package", packageName, null)
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updatePermissionUi() {
+        if (isPermissionGranted()) {
+            tvPermissionStatus.text = "Permissions: Granted"
+            tvPermissionStatus.setTextColor(
+                ContextCompat.getColor(this, android.R.color.holo_green_light)
+            )
+            btnPermissionFix.visibility = View.GONE
+        } else {
+            tvPermissionStatus.text = "Permissions: Not granted"
+            tvPermissionStatus.setTextColor(ContextCompat.getColor(this, R.color.pink))
+            btnPermissionFix.visibility = View.VISIBLE
+            btnPermissionFix.text =
+                if (isPermanentlyDenied()) "Settings Kholo" else "Allow Karo"
+        }
+    }
+
+    // ---------- Clipboard / fetch ----------
 
     private fun autofillFromClipboard() {
         val text = clipboardText() ?: return
@@ -204,10 +372,10 @@ class MainActivity : AppCompatActivity() {
         resultCard.visibility = View.VISIBLE
         tvTitle.text = if (info.title.isEmpty()) "TikTok Video" else info.title
         tvAuthor.text = if (info.authorName.isEmpty()) "@tiktok" else "@" + info.authorName
-        tvStats.text = "Views " + formatCount(info.playCount) +
-            "  |  Likes " + formatCount(info.likeCount) +
-            "  |  Comments " + formatCount(info.commentCount) +
-            "  |  Shares " + formatCount(info.shareCount)
+        tvStatViews.text = formatCount(info.playCount) + "\nViews"
+        tvStatLikes.text = formatCount(info.likeCount) + "\nLikes"
+        tvStatComments.text = formatCount(info.commentCount) + "\nComments"
+        tvStatShares.text = formatCount(info.shareCount) + "\nShares"
         ivCover.setImageResource(android.R.drawable.ic_menu_gallery)
         if (info.cover.isNotEmpty()) {
             Thread {
@@ -229,6 +397,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---------- Download flow ----------
+
     private fun startDownloadFlow(fileUrl: String?, ext: String, label: String, type: String) {
         val video = currentVideo
         if (fileUrl.isNullOrEmpty() || video == null) {
@@ -238,72 +408,12 @@ class MainActivity : AppCompatActivity() {
         val safeId = video.id.ifEmpty { System.currentTimeMillis().toString() }
         val fileName = "PVV_" + safeId + "_" + System.currentTimeMillis() + "." + ext
         pendingDownload = PendingDownload(fileUrl, fileName, label, type)
-        if (HistoryStore.isPermissionGranted(this)) {
+        if (isPermissionGranted()) {
             startDownload()
+        } else if (isPermanentlyDenied()) {
+            showGoToSettingsDialog()
         } else {
-            showPermissionDialog()
-        }
-    }
-
-    private fun showPermissionDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Photos aur videos ki permission")
-            .setMessage(
-                "PRIME VID VAULT ko gallery me videos save karne ke liye " +
-                    "photos aur videos ka access chahiye. Allow karne par video " +
-                    "seedha Gallery me save hogi."
-            )
-            .setPositiveButton("Allow") { _, _ -> requestSystemPermission() }
-            .setNegativeButton("Deny") { _, _ ->
-                Toast.makeText(
-                    this,
-                    "Permission deny hui - download nahi hoga",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun requestSystemPermission() {
-        val permission = if (Build.VERSION.SDK_INT >= 33) {
-            Manifest.permission.READ_MEDIA_VIDEO
-        } else {
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        }
-        if (ContextCompat.checkSelfPermission(this, permission) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            HistoryStore.setPermissionGranted(this, true)
-            startDownload()
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(permission),
-                PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            ) {
-                HistoryStore.setPermissionGranted(this, true)
-                startDownload()
-            } else {
-                Toast.makeText(
-                    this,
-                    "Permission deny hui - download nahi hoga",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            showPermissionExplainer()
         }
     }
 
@@ -325,11 +435,7 @@ class MainActivity : AppCompatActivity() {
                 .setAllowedOverRoaming(true)
             val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             pendingDownloadId = dm.enqueue(request)
-            Toast.makeText(
-                this,
-                "Download shuru - " + pending.label,
-                Toast.LENGTH_SHORT
-            ).show()
+            showDownloadStarted(pending)
             HistoryStore.add(
                 this,
                 HistoryItem(
@@ -342,6 +448,11 @@ class MainActivity : AppCompatActivity() {
             )
             refreshHistory()
         } catch (e: Exception) {
+            statusCard.visibility = View.VISIBLE
+            tvDownloadFile.text = pending.fileName
+            tvDownloadStatus.text = "Download shuru nahi hui: " + e.message
+            btnRetryDownload.visibility = View.VISIBLE
+            btnOpenDownloads.visibility = View.GONE
             Toast.makeText(
                 this,
                 "Download shuru nahi hui: " + e.message,
@@ -350,7 +461,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showDownloadStarted(pending: PendingDownload) {
+        statusCard.visibility = View.VISIBLE
+        tvDownloadFile.text = pending.fileName
+        downloadProgress.isIndeterminate = true
+        downloadProgress.progress = 0
+        tvDownloadStatus.text = "Downloading..."
+        btnOpenDownloads.visibility = View.GONE
+        btnRetryDownload.visibility = View.GONE
+        startProgressPolling()
+    }
+
+    private fun startProgressPolling() {
+        stopProgressPolling()
+        progressRunnable = object : Runnable {
+            override fun run() {
+                updateDownloadProgress()
+                progressHandler.postDelayed(this, 800)
+            }
+        }
+        progressHandler.post(progressRunnable!!)
+    }
+
+    private fun stopProgressPolling() {
+        progressRunnable?.let { progressHandler.removeCallbacks(it) }
+        progressRunnable = null
+    }
+
+    private fun updateDownloadProgress() {
+        if (pendingDownloadId < 0) return
+        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val cursor = dm.query(DownloadManager.Query().setFilterById(pendingDownloadId))
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                val totalIdx = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                val doneIdx = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                val total = if (totalIdx >= 0) c.getLong(totalIdx) else -1L
+                val done = if (doneIdx >= 0) c.getLong(doneIdx) else 0L
+                if (total > 0) {
+                    downloadProgress.isIndeterminate = false
+                    val pct = ((done * 100) / total).toInt()
+                    downloadProgress.progress = pct
+                    tvDownloadStatus.text = "Downloading... " + pct + "%"
+                }
+            }
+        }
+    }
+
     private fun onDownloadComplete(id: Long) {
+        stopProgressPolling()
         val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         val cursor = dm.query(DownloadManager.Query().setFilterById(id))
         cursor.use { c ->
@@ -358,6 +517,11 @@ class MainActivity : AppCompatActivity() {
                 val statusIdx = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
                 val status = if (statusIdx >= 0) c.getInt(statusIdx) else -1
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    downloadProgress.isIndeterminate = false
+                    downloadProgress.progress = 100
+                    tvDownloadStatus.text = "Saved to Gallery"
+                    btnOpenDownloads.visibility = View.VISIBLE
+                    btnRetryDownload.visibility = View.GONE
                     val uriIdx = c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
                     val localUri = if (uriIdx >= 0) c.getString(uriIdx) else null
                     if (localUri != null) {
@@ -372,11 +536,41 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
+                    val reasonIdx = c.getColumnIndex(DownloadManager.COLUMN_REASON)
+                    val reason = if (reasonIdx >= 0) c.getInt(reasonIdx) else -1
+                    tvDownloadStatus.text =
+                        "Download fail ho gaya (reason: " + reason + "). Dobara try karo."
+                    btnRetryDownload.visibility = View.VISIBLE
+                    btnOpenDownloads.visibility = View.GONE
                     Toast.makeText(this, "Download fail ho gaya", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
+
+    private fun openDownloads() {
+        try {
+            startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Downloads folder kholo: Files app → Downloads",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun retryDownload() {
+        if (isPermissionGranted()) {
+            startDownload()
+        } else if (isPermanentlyDenied()) {
+            showGoToSettingsDialog()
+        } else {
+            showPermissionExplainer()
+        }
+    }
+
+    // ---------- Helpers ----------
 
     private fun refreshHistory() {
         historyAdapter.update(HistoryStore.load(this))
