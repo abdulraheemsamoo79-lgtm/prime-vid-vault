@@ -21,10 +21,10 @@ object TikWmClient {
             conn.requestMethod = "GET"
             conn.connectTimeout = 15000
             conn.readTimeout = 20000
-            conn.setRequestProperty("User-Agent", "PRIME-VID-VAULT/1.0")
+            conn.setRequestProperty("User-Agent", "PRIME-VID-VAULT/2.0")
             val code = conn.responseCode
             if (code != 200) {
-                return Result.failure(Exception("Server error: $code. Dobara try karo."))
+                return Result.failure(Exception("Server error: $code. Try again."))
             }
             val reader = BufferedReader(InputStreamReader(conn.inputStream))
             val body = reader.readText()
@@ -33,7 +33,7 @@ object TikWmClient {
             val json = JSONObject(body)
             if (json.optInt("code", -1) != 0) {
                 return Result.failure(
-                    Exception("Video nahi mila. Link check karo — video private ya delete ho sakti hai.")
+                    Exception("Video not found. Check the link — the video may be private or deleted.")
                 )
             }
             val d = json.getJSONObject("data")
@@ -47,14 +47,16 @@ object TikWmClient {
                 hdPlayUrl = d.optString("hdplay", d.optString("play", "")),
                 musicUrl = d.optString("music", ""),
                 authorName = author?.optString("nickname", "") ?: "",
+                authorUsername = author?.optString("unique_id", "") ?: "",
                 authorAvatar = author?.optString("avatar", "") ?: "",
+                duration = d.optInt("duration", 0),
                 playCount = d.optLong("play_count", 0),
                 likeCount = d.optLong("digg_count", 0),
                 commentCount = d.optLong("comment_count", 0),
                 shareCount = d.optLong("share_count", 0)
             )
             if (info.playUrl.isEmpty()) {
-                return Result.failure(Exception("Download link nahi mila. Dobara try karo."))
+                return Result.failure(Exception("Download link not found. Try again."))
             }
             Result.success(info)
         } catch (e: Exception) {

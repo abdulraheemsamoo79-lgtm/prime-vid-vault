@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Logo mark: electric violet → cyan gradient -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/gold" />
+    android:shape="rectangle">
+    <gradient
+        android:angle="135"
+        android:startColor="#7C3AED"
+        android:centerColor="#8B5CF6"
+        android:endColor="#22D3EE"
+        android:type="linear" />
+    <corners android:radius="14dp" />
 </shape>

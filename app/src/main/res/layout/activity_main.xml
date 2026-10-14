@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- PRIME VID VAULT v2.0 — Legendary UI.
+     Deep black + midnight navy, electric violet → cyan gradient,
+     dark glass cards. All v1.x view IDs are preserved. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
@@ -8,10 +12,11 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Premium header -->
+        <!-- Brand header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -31,7 +36,7 @@
                     android:background="@drawable/bg_logo_circle"
                     android:gravity="center"
                     android:text="P"
-                    android:textColor="@android:color/black"
+                    android:textColor="@android:color/white"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -46,18 +51,29 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="PRIME VID VAULT"
-                        android:textColor="@color/gold"
-                        android:textSize="22sp"
+                        android:textColor="@color/text"
+                        android:textSize="21sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="TikTok Downloader • No Watermark"
+                        android:text="No-Watermark TikTok Downloader"
                         android:textColor="@color/muted"
-                        android:textSize="13sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp"
+                    android:text="NO WATERMARK"
+                    android:textColor="@color/cyan"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <TextView
@@ -69,11 +85,84 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Hero -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Paste. Fetch. "
+                android:textColor="@color/text"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Download."
+                android:textColor="@color/cyan"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Paste your TikTok link, preview the video, then save it in No-Watermark HD. No login, no watermark."
+            android:textColor="@color/muted"
+            android:textSize="14sp" />
+
+        <!-- Steps -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="7dp"
+                android:text="1  Paste link"
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="6dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="7dp"
+                android:text="2  Preview video"
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="7dp"
+                android:text="3  Download in HD"
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+
         <!-- Input card -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:background="@drawable/bg_card"
             android:orientation="vertical"
             android:padding="16dp">
@@ -83,20 +172,28 @@
                 android:layout_height="wrap_content"
                 android:text="TikTok Link"
                 android:textColor="@color/text"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Works with video, photo slideshow, and story links."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
 
             <EditText
                 android:id="@+id/etLink"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_input"
-                android:hint="TikTok link yahan paste karo..."
+                android:hint="https://vt.tiktok.com/… or tiktok.com/…"
                 android:inputType="textUri"
                 android:padding="14dp"
                 android:textColor="@color/text"
-                android:textColorHint="@color/muted"
+                android:textColorHint="#6B7280"
                 android:textSize="15sp" />
 
             <LinearLayout
@@ -125,7 +222,7 @@
                     android:background="@drawable/btn_primary"
                     android:text="Get Video"
                     android:textAllCaps="false"
-                    android:textColor="@android:color/black"
+                    android:textColor="@android:color/white"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -163,7 +260,7 @@
                 android:gravity="center"
                 android:padding="10dp"
                 android:text="No Watermark"
-                android:textColor="@color/accent"
+                android:textColor="@color/text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -176,7 +273,7 @@
                 android:gravity="center"
                 android:padding="10dp"
                 android:text="HD Quality"
-                android:textColor="@color/accent"
+                android:textColor="@color/text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -189,9 +286,37 @@
                 android:gravity="center"
                 android:padding="10dp"
                 android:text="MP3 Audio"
-                android:textColor="@color/accent"
+                android:textColor="@color/text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Empty preview placeholder -->
+        <LinearLayout
+            android:id="@+id/emptyPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_empty_preview"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▶"
+                android:textColor="@color/accent"
+                android:textSize="28sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="The video preview will appear here.\nPaste a link and press Get Video."
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <!-- Download status card -->
@@ -225,10 +350,11 @@
                 android:id="@+id/downloadProgress"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="10dp"
                 android:layout_marginTop="10dp"
                 android:max="100"
-                android:progress="0" />
+                android:progress="0"
+                android:progressDrawable="@drawable/progress_gradient" />
 
             <TextView
                 android:id="@+id/tvDownloadStatus"
@@ -246,7 +372,7 @@
                 android:background="@drawable/btn_primary"
                 android:text="Open Downloads"
                 android:textAllCaps="false"
-                android:textColor="@android:color/black"
+                android:textColor="@android:color/white"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -256,7 +382,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/btn_secondary"
-                android:text="Dobara Try Karo"
+                android:text="Try Again"
                 android:textAllCaps="false"
                 android:textColor="@color/text"
                 android:visibility="gone" />
@@ -273,21 +399,58 @@
             android:padding="16dp"
             android:visibility="gone">
 
-            <ImageView
-                android:id="@+id/ivCover"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_gallery" />
+                android:layout_height="220dp">
 
-            <TextView
-                android:id="@+id/tvTitle"
+                <ImageView
+                    android:id="@+id/ivCover"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@android:drawable/ic_menu_gallery" />
+
+                <TextView
+                    android:id="@+id/tvDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|start"
+                    android:layout_margin="10dp"
+                    android:background="@drawable/bg_duration_badge"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="@color/text"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/ivAvatar"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_avatar"
+                    android:clipToOutline="true"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:textColor="@color/text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvAuthor"
@@ -356,6 +519,49 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnCopyCaption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Copy Caption"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnOpenTikTok"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Open in TikTok"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnShareLink"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_secondary"
+                    android:text="Share Link"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -373,7 +579,7 @@
                 android:background="@drawable/btn_primary"
                 android:text="No-Watermark HD"
                 android:textAllCaps="false"
-                android:textColor="@android:color/black"
+                android:textColor="@android:color/white"
                 android:textStyle="bold" />
 
             <Button
@@ -422,7 +628,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Your Vault (History)"
+            android:text="Recent Downloads"
             android:textColor="@color/text"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -433,7 +639,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center"
-            android:text="Abhi koi download nahi — upar link paste karo aur Get Video dabao."
+            android:text="No downloads yet — paste a link above and press Get Video."
             android:textColor="@color/muted"
             android:textSize="13sp" />
 
@@ -454,12 +660,30 @@
             android:textAllCaps="false"
             android:textColor="@color/text" />
 
+        <!-- How it works -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="How does it work?"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="This app sends your link to the free tikwm API, which finds the no-watermark version of the video. Your link is never saved on a server — everything happens on your device. If a video is private or deleted, the API will return an error."
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center"
-            android:text="PRIME VID VAULT v1.2 • Videos save to Downloads / PrimeVidVault"
+            android:text="PRIME VID VAULT v2.0 • Videos save to Downloads / PrimeVidVault"
             android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>

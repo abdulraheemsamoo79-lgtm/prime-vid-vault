@@ -9,7 +9,9 @@ data class VideoInfo(
     val hdPlayUrl: String, // HD no watermark
     val musicUrl: String,
     val authorName: String,
+    val authorUsername: String,
     val authorAvatar: String,
+    val duration: Int,
     val playCount: Long,
     val likeCount: Long,
     val commentCount: Long,

@@ -1,31 +1,47 @@
 # PRIME VID VAULT — TikTok Downloader (Native Android App)
 
-Native Android app. TikTok link paste karo → video fetch hoti hai (free tikwm API) →
-download dabao → video seedha Gallery me save. **Koi permission nahi chahiye:**
-Android 10+ pe system DownloadManager khud public Downloads folder me save karta
-hai, isliye app koi storage/media permission nahi mangti.
+Native Android app. Paste a TikTok link → the video is fetched (free tikwm API) →
+press download → the video saves straight to your Gallery. **No permission needed:**
+on Android 10+, the system DownloadManager saves to the public Downloads folder
+on the app's behalf, so the app never asks for storage/media permission.
+
+## UI — v2.0 Legendary
+
+Premium dark theme: deep black + midnight navy, electric violet → cyan
+gradient CTAs, dark glass cards, gradient logo mark, gradient download
+progress bar, smooth animations (layout transitions, card fade+slide entrance,
+cover/avatar fade-in, animated progress, ripple press feedback, smooth scroll
+to the result card).
 
 ## Features
 - TikTok link paste + clipboard auto-fill / auto-fetch
-- Cover, creator, title, views/likes/comments/shares preview
+- Cover, creator avatar, name, @username, title, duration, views/likes/comments/shares preview
 - 5 download options: No-Watermark HD, No-Watermark, With Watermark, MP3 Audio, Cover Image
-- DownloadManager se download + live progress % + Saved/Failed status app ke andar
-- MediaScanner scan, taaki video turant Gallery me dikhe
-- Download history (Your Vault) — SharedPreferences me save, delete / clear support
+- DownloadManager download + live progress % + Saved/Failed status inside the app
+- MediaScanner scan, so the video shows in Gallery immediately
+- Download history (Recent Downloads) — saved in SharedPreferences, delete / clear support
+- Quick actions: Copy Caption, Open in TikTok, Share Link
+- Fully English UI
 
-## APK kaise banayein (Android Studio)
-1. Android Studio (latest) install karo — JDK uske saath bundled aata hai.
-2. Android Studio me **File → Open** → is `PrimeVidVault` folder ko select karo.
-3. Pehli baar Gradle sync hone do (internet chahiye — dependencies download hongi).
+## Build the APK (GitHub Actions — no PC needed)
+1. Push this project to a GitHub repo (`main` branch). The included
+   `.github/workflows/build-apk.yml` runs automatically on every push.
+2. Repo → Actions tab → latest run → Artifacts → `prime-vid-vault-apk` → unzip.
+3. Install `app-debug.apk` on your phone (allow "Install unknown apps" when asked).
+
+## Build the APK (Android Studio)
+1. Install Android Studio (latest) — JDK comes bundled with it.
+2. Android Studio → **File → Open** → select this `PrimeVidVault` folder.
+3. Let Gradle sync finish on first open (internet needed — dependencies download).
 4. **Build → Build App Bundle(s) / APK(s) → Build APK(s)**.
-5. APK yahan milegi: `app/build/outputs/apk/debug/app-debug.apk`
-6. APK ko phone me copy karke install karo (install ke waqt "Unknown sources / Install unknown apps" allow karna hoga).
+5. APK location: `app/build/outputs/apk/debug/app-debug.apk`
+6. Copy the APK to your phone and install it (allow "Unknown sources / Install unknown apps" when asked).
 
-Release (signed) APK ke liye: **Build → Generate Signed App Bundle / APK** → apni keystore banao.
+For a signed release APK: **Build → Generate Signed App Bundle / APK** → create your keystore.
 
 ## Tech notes
 - Language: Kotlin, minSdk 24 (Android 7.0+), targetSdk 34
 - Zero third-party networking libs — `HttpURLConnection` + `org.json` (Android built-in)
 - API: `https://www.tikwm.com/api/?url=<tiktok link>&hd=1` (free, no key)
-- Files save hoti hain: `Downloads/PrimeVidVault/` — Gallery app inhe dikhata hai
-- Agar tikwm API kabhi down ho, app error message dikhayegi — API ka status `tikwm.com` par check karo.
+- Files save to: `Downloads/PrimeVidVault/` — Gallery shows them
+- If the tikwm API is ever down, the app shows an error message — check the API status at `tikwm.com`.

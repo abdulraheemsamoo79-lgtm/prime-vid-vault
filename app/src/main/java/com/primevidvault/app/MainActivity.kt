@@ -2,6 +2,7 @@ package com.primevidvault.app
 
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -19,6 +20,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -27,8 +29,9 @@ import androidx.recyclerview.widget.RecyclerView
 import java.net.URL
 
 /**
- * PRIME VID VAULT v1.2
+ * PRIME VID VAULT v2.0 — Legendary UI
  *
+ * Dark premium theme: deep black + midnight navy, violet → cyan gradient.
  * No permission is needed: on Android 10+ the system DownloadManager saves to
  * the public Downloads folder on the app's behalf, and MediaScanner makes the
  * file visible in Gallery. So downloads run directly — no permission popups,
@@ -36,13 +39,18 @@ import java.net.URL
  */
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var scrollView: ScrollView
+    private var currentLink: String = ""
     private lateinit var etLink: EditText
     private lateinit var btnPaste: Button
     private lateinit var btnFetch: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var tvStatus: TextView
+    private lateinit var emptyPreview: View
     private lateinit var resultCard: View
     private lateinit var ivCover: ImageView
+    private lateinit var ivAvatar: ImageView
+    private lateinit var tvDuration: TextView
     private lateinit var tvTitle: TextView
     private lateinit var tvAuthor: TextView
     private lateinit var tvStatViews: TextView
@@ -84,13 +92,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        scrollView = findViewById(R.id.scrollView)
         etLink = findViewById(R.id.etLink)
         btnPaste = findViewById(R.id.btnPaste)
         btnFetch = findViewById(R.id.btnFetch)
         progressBar = findViewById(R.id.progressBar)
         tvStatus = findViewById(R.id.tvStatus)
+        emptyPreview = findViewById(R.id.emptyPreview)
         resultCard = findViewById(R.id.resultCard)
         ivCover = findViewById(R.id.ivCover)
+        ivAvatar = findViewById(R.id.ivAvatar)
+        tvDuration = findViewById(R.id.tvDuration)
         tvTitle = findViewById(R.id.tvTitle)
         tvAuthor = findViewById(R.id.tvAuthor)
         tvStatViews = findViewById(R.id.tvStatViews)
@@ -112,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             onRedownload = {
                 Toast.makeText(
                     this,
-                    "Link dobara paste karo, phir download karo",
+                    "Paste the link again, then download",
                     Toast.LENGTH_SHORT
                 ).show()
             },
@@ -130,10 +142,13 @@ class MainActivity : AppCompatActivity() {
         btnClearHistory.setOnClickListener {
             HistoryStore.clear(this)
             refreshHistory()
-            Toast.makeText(this, "History clear ho gayi", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "History cleared", Toast.LENGTH_SHORT).show()
         }
         btnOpenDownloads.setOnClickListener { openDownloads() }
         btnRetryDownload.setOnClickListener { retryDownload() }
+        findViewById<Button>(R.id.btnCopyCaption).setOnClickListener { copyCaption() }
+        findViewById<Button>(R.id.btnOpenTikTok).setOnClickListener { openInTikTok() }
+        findViewById<Button>(R.id.btnShareLink).setOnClickListener { shareLink() }
 
         findViewById<Button>(R.id.btnNoWmHd).setOnClickListener {
             startDownloadFlow(currentVideo?.hdPlayUrl, "mp4", "No-Watermark HD", "Video")
@@ -182,7 +197,7 @@ class MainActivity : AppCompatActivity() {
     private fun pasteFromClipboard() {
         val text = clipboardText()
         if (text.isNullOrEmpty()) {
-            Toast.makeText(this, "Clipboard khali hai", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Clipboard is empty", Toast.LENGTH_SHORT).show()
             return
         }
         etLink.setText(text)
@@ -203,17 +218,19 @@ class MainActivity : AppCompatActivity() {
     private fun fetchVideo() {
         val link = etLink.text.toString().trim()
         if (link.isEmpty()) {
-            showStatus("Pehle TikTok link paste karo.")
+            showStatus("Paste a TikTok link first.")
             return
         }
         if (!isTikTokLink(link)) {
-            showStatus("Ye TikTok link nahi lag raha. Sahi link paste karo.")
+            showStatus("That doesn't look like a TikTok link. Paste a valid TikTok link.")
             return
         }
         hideStatus()
         progressBar.visibility = View.VISIBLE
         btnFetch.isEnabled = false
         resultCard.visibility = View.GONE
+        emptyPreview.visibility = View.GONE
+        currentLink = link
         Thread {
             val result = TikWmClient.fetch(link)
             runOnUiThread {
@@ -223,16 +240,54 @@ class MainActivity : AppCompatActivity() {
                     currentVideo = info
                     showResult(info)
                 }.onFailure { e ->
-                    showStatus(e.message ?: "Kuch galat ho gaya. Dobara try karo.")
+                    emptyPreview.visibility = View.VISIBLE
+                    showStatus(e.message ?: "Something went wrong. Try again.")
                 }
             }
         }.start()
     }
 
     private fun showResult(info: VideoInfo) {
+        emptyPreview.visibility = View.GONE
         resultCard.visibility = View.VISIBLE
+        // Smooth entrance: fade + slide up, then scroll the card into view.
+        resultCard.alpha = 0f
+        resultCard.translationY = 32f
+        resultCard.animate().alpha(1f).translationY(0f).setDuration(350).start()
+        resultCard.post { scrollView.smoothScrollTo(0, resultCard.top) }
         tvTitle.text = if (info.title.isEmpty()) "TikTok Video" else info.title
-        tvAuthor.text = if (info.authorName.isEmpty()) "@tiktok" else "@" + info.authorName
+        tvAuthor.text = if (info.authorName.isEmpty()) {
+            "@tiktok"
+        } else if (info.authorUsername.isNotEmpty()) {
+            info.authorName + "  @" + info.authorUsername
+        } else {
+            info.authorName
+        }
+        if (info.duration > 0) {
+            tvDuration.text = info.duration.toString() + "s"
+            tvDuration.visibility = View.VISIBLE
+        } else {
+            tvDuration.visibility = View.GONE
+        }
+        if (info.authorAvatar.isNotEmpty()) {
+            ivAvatar.visibility = View.VISIBLE
+            ivAvatar.alpha = 0f
+            Thread {
+                try {
+                    val bmp = BitmapFactory.decodeStream(URL(info.authorAvatar).openStream())
+                    runOnUiThread {
+                        if (bmp != null) {
+                            ivAvatar.setImageBitmap(bmp)
+                            ivAvatar.animate().alpha(1f).setDuration(300).start()
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread { ivAvatar.visibility = View.GONE }
+                }
+            }.start()
+        } else {
+            ivAvatar.visibility = View.GONE
+        }
         tvStatViews.text = formatCount(info.playCount) + "\nViews"
         tvStatLikes.text = formatCount(info.likeCount) + "\nLikes"
         tvStatComments.text = formatCount(info.commentCount) + "\nComments"
@@ -242,7 +297,13 @@ class MainActivity : AppCompatActivity() {
             Thread {
                 try {
                     val bmp = BitmapFactory.decodeStream(URL(info.cover).openStream())
-                    runOnUiThread { if (bmp != null) ivCover.setImageBitmap(bmp) }
+                    runOnUiThread {
+                        if (bmp != null) {
+                            ivCover.alpha = 0f
+                            ivCover.setImageBitmap(bmp)
+                            ivCover.animate().alpha(1f).setDuration(300).start()
+                        }
+                    }
                 } catch (e: Exception) {
                     // Keep placeholder
                 }
@@ -250,12 +311,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---------- Quick actions ----------
+
+    private fun copyCaption() {
+        val video = currentVideo
+        if (video == null) {
+            Toast.makeText(this, "Fetch a video first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(
+            ClipData.newPlainText("caption", video.title.ifEmpty { "TikTok Video" })
+        )
+        Toast.makeText(this, "Caption copied", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openInTikTok() {
+        if (currentLink.isEmpty()) {
+            Toast.makeText(this, "Fetch a video first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentLink)))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Couldn't open TikTok", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun shareLink() {
+        if (currentLink.isEmpty()) {
+            Toast.makeText(this, "Fetch a video first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, currentLink + " (via PRIME VID VAULT)")
+        }
+        startActivity(Intent.createChooser(intent, "Share link"))
+    }
+
     private fun formatCount(n: Long): String {
         return when {
-            n >= 1_000_000 -> String.format("%.1fM", n / 1_000_000.0)
-            n >= 1_000 -> String.format("%.1fK", n / 1_000.0)
+            n >= 1_000_000 -> trimOneDecimal(n / 1_000_000.0) + "M"
+            n >= 1_000 -> trimOneDecimal(n / 1_000.0) + "K"
             else -> n.toString()
         }
+    }
+
+    private fun trimOneDecimal(v: Double): String {
+        val s = String.format("%.1f", v)
+        return if (s.endsWith(".0")) s.dropLast(2) else s
     }
 
     // ---------- Download flow (no permission needed) ----------
@@ -263,7 +368,7 @@ class MainActivity : AppCompatActivity() {
     private fun startDownloadFlow(fileUrl: String?, ext: String, label: String, type: String) {
         val video = currentVideo
         if (fileUrl.isNullOrEmpty() || video == null) {
-            Toast.makeText(this, "Pehle video fetch karo", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Fetch a video first", Toast.LENGTH_SHORT).show()
             return
         }
         val safeId = video.id.ifEmpty { System.currentTimeMillis().toString() }
@@ -305,12 +410,12 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             statusCard.visibility = View.VISIBLE
             tvDownloadFile.text = pending.fileName
-            tvDownloadStatus.text = "Download shuru nahi hui: " + e.message
+            tvDownloadStatus.text = "Download didn't start: " + e.message
             btnRetryDownload.visibility = View.VISIBLE
             btnOpenDownloads.visibility = View.GONE
             Toast.makeText(
                 this,
-                "Download shuru nahi hui: " + e.message,
+                "Download didn't start: " + e.message,
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -318,6 +423,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showDownloadStarted(pending: PendingDownload) {
         statusCard.visibility = View.VISIBLE
+        // Smooth entrance for the status card.
+        statusCard.alpha = 0f
+        statusCard.translationY = 24f
+        statusCard.animate().alpha(1f).translationY(0f).setDuration(300).start()
         tvDownloadFile.text = pending.fileName
         downloadProgress.isIndeterminate = true
         downloadProgress.progress = 0
@@ -356,7 +465,8 @@ class MainActivity : AppCompatActivity() {
                 if (total > 0) {
                     downloadProgress.isIndeterminate = false
                     val pct = ((done * 100) / total).toInt()
-                    downloadProgress.progress = pct
+                    // Animated progress (smooth, not jumpy).
+                    downloadProgress.setProgress(pct, true)
                     tvDownloadStatus.text = "Downloading... " + pct + "%"
                 }
             }
@@ -373,8 +483,8 @@ class MainActivity : AppCompatActivity() {
                 val status = if (statusIdx >= 0) c.getInt(statusIdx) else -1
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
                     downloadProgress.isIndeterminate = false
-                    downloadProgress.progress = 100
-                    tvDownloadStatus.text = "Saved to Gallery"
+                    downloadProgress.setProgress(100, true)
+                    tvDownloadStatus.text = "Saved — check your Downloads folder"
                     btnOpenDownloads.visibility = View.VISIBLE
                     btnRetryDownload.visibility = View.GONE
                     val uriIdx = c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
@@ -387,17 +497,17 @@ class MainActivity : AppCompatActivity() {
                     }
                     Toast.makeText(
                         this,
-                        "Gallery me save ho gaya",
+                        "Saved to your Downloads folder",
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
                     val reasonIdx = c.getColumnIndex(DownloadManager.COLUMN_REASON)
                     val reason = if (reasonIdx >= 0) c.getInt(reasonIdx) else -1
                     tvDownloadStatus.text =
-                        "Download fail ho gaya (reason: " + reason + "). Dobara try karo."
+                        "Download failed (reason: " + reason + "). Try again."
                     btnRetryDownload.visibility = View.VISIBLE
                     btnOpenDownloads.visibility = View.GONE
-                    Toast.makeText(this, "Download fail ho gaya", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Download failed", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -409,7 +519,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(
                 this,
-                "Downloads folder kholo: Files app → Downloads",
+                "Open the Downloads folder: Files app → Downloads",
                 Toast.LENGTH_LONG
             ).show()
         }
