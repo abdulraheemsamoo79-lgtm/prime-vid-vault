@@ -1,13 +1,11 @@
 package com.primevidvault.app
 
-import android.Manifest
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -16,7 +14,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -24,22 +21,20 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.net.URL
 
+/**
+ * PRIME VID VAULT v1.2
+ *
+ * No permission is needed: on Android 10+ the system DownloadManager saves to
+ * the public Downloads folder on the app's behalf, and MediaScanner makes the
+ * file visible in Gallery. So downloads run directly — no permission popups,
+ * no Settings detours.
+ */
 class MainActivity : AppCompatActivity() {
-
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 1001
-        private const val PREFS = "prime_vid_vault"
-        private const val KEY_PERMISSION_PROMPTED = "permission_prompted"
-        private const val KEY_PERMISSION_REQUESTED_BEFORE = "permission_requested_before"
-    }
 
     private lateinit var etLink: EditText
     private lateinit var btnPaste: Button
@@ -55,9 +50,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatComments: TextView
     private lateinit var tvStatShares: TextView
     private lateinit var rvHistory: RecyclerView
+    private lateinit var tvEmptyHistory: TextView
     private lateinit var btnClearHistory: Button
-    private lateinit var tvPermissionStatus: TextView
-    private lateinit var btnPermissionFix: Button
     private lateinit var statusCard: View
     private lateinit var tvDownloadFile: TextView
     private lateinit var downloadProgress: ProgressBar
@@ -104,9 +98,8 @@ class MainActivity : AppCompatActivity() {
         tvStatComments = findViewById(R.id.tvStatComments)
         tvStatShares = findViewById(R.id.tvStatShares)
         rvHistory = findViewById(R.id.rvHistory)
+        tvEmptyHistory = findViewById(R.id.tvEmptyHistory)
         btnClearHistory = findViewById(R.id.btnClearHistory)
-        tvPermissionStatus = findViewById(R.id.tvPermissionStatus)
-        btnPermissionFix = findViewById(R.id.btnPermissionFix)
         statusCard = findViewById(R.id.statusCard)
         tvDownloadFile = findViewById(R.id.tvDownloadFile)
         downloadProgress = findViewById(R.id.downloadProgress)
@@ -130,6 +123,7 @@ class MainActivity : AppCompatActivity() {
         )
         rvHistory.layoutManager = LinearLayoutManager(this)
         rvHistory.adapter = historyAdapter
+        refreshHistory()
 
         btnPaste.setOnClickListener { pasteFromClipboard() }
         btnFetch.setOnClickListener { fetchVideo() }
@@ -138,7 +132,6 @@ class MainActivity : AppCompatActivity() {
             refreshHistory()
             Toast.makeText(this, "History clear ho gayi", Toast.LENGTH_SHORT).show()
         }
-        btnPermissionFix.setOnClickListener { handlePermissionButton() }
         btnOpenDownloads.setOnClickListener { openDownloads() }
         btnRetryDownload.setOnClickListener { retryDownload() }
 
@@ -166,15 +159,7 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(downloadReceiver, filter)
         }
 
-        updatePermissionUi()
-        maybePromptPermissionOnFirstLaunch()
         autofillFromClipboard()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Refresh after returning from system Settings.
-        updatePermissionUi()
     }
 
     override fun onDestroy() {
@@ -184,130 +169,6 @@ class MainActivity : AppCompatActivity() {
             unregisterReceiver(downloadReceiver)
         } catch (e: Exception) {
             // Already unregistered
-        }
-    }
-
-    // ---------- Permissions ----------
-
-    private fun prefs() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
-    private fun mediaPermission(): String =
-        if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_VIDEO
-        else Manifest.permission.WRITE_EXTERNAL_STORAGE
-
-    private fun isPermissionGranted(): Boolean {
-        return ContextCompat.checkSelfPermission(this, mediaPermission()) ==
-            PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun isPermanentlyDenied(): Boolean {
-        val requestedBefore = prefs().getBoolean(KEY_PERMISSION_REQUESTED_BEFORE, false)
-        return requestedBefore &&
-            !isPermissionGranted() &&
-            !ActivityCompat.shouldShowRequestPermissionRationale(this, mediaPermission())
-    }
-
-    private fun maybePromptPermissionOnFirstLaunch() {
-        val p = prefs()
-        if (p.getBoolean(KEY_PERMISSION_PROMPTED, false)) return
-        p.edit().putBoolean(KEY_PERMISSION_PROMPTED, true).apply()
-        showPermissionExplainer()
-    }
-
-    private fun showPermissionExplainer() {
-        AlertDialog.Builder(this)
-            .setTitle("Permission chahiye")
-            .setMessage(
-                "Videos ko Gallery me save karne ke liye PRIME VID VAULT ko " +
-                    "photos/videos ka access chahiye. Allow karne par downloads " +
-                    "seedha Gallery me save hongi aur download notifications bhi milengi."
-            )
-            .setPositiveButton("Allow") { _, _ -> requestSystemPermissions() }
-            .setNegativeButton("Baad me") { _, _ -> updatePermissionUi() }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun handlePermissionButton() {
-        if (isPermissionGranted()) {
-            Toast.makeText(this, "Permissions pehle se allowed hain", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (isPermanentlyDenied()) {
-            showGoToSettingsDialog()
-        } else {
-            showPermissionExplainer()
-        }
-    }
-
-    private fun requestSystemPermissions() {
-        prefs().edit().putBoolean(KEY_PERMISSION_REQUESTED_BEFORE, true).apply()
-        val perms = mutableListOf(mediaPermission())
-        if (Build.VERSION.SDK_INT >= 33) {
-            // Needed so download-complete notifications are visible on Android 13+.
-            perms.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        ActivityCompat.requestPermissions(this, perms.toTypedArray(), PERMISSION_REQUEST_CODE)
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val mediaIdx = permissions.indexOf(mediaPermission())
-            val mediaGranted = mediaIdx >= 0 &&
-                grantResults.getOrNull(mediaIdx) == PackageManager.PERMISSION_GRANTED
-            updatePermissionUi()
-            if (mediaGranted) {
-                Toast.makeText(this, "Permission allowed", Toast.LENGTH_SHORT).show()
-                startDownload()
-            } else {
-                if (isPermanentlyDenied()) {
-                    showGoToSettingsDialog()
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Permission deny hui - download nahi hoga",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-    }
-
-    private fun showGoToSettingsDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Permission Settings se allow karo")
-            .setMessage(
-                "Permission permanently deny ho gayi hai, isliye popup dobara " +
-                    "nahi aayega. App Settings → Permissions me jaake " +
-                    "Photos/Videos ko Allow karo."
-            )
-            .setPositiveButton("Settings Kholo") { _, _ ->
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                intent.data = Uri.fromParts("package", packageName, null)
-                startActivity(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun updatePermissionUi() {
-        if (isPermissionGranted()) {
-            tvPermissionStatus.text = "Permissions: Granted"
-            tvPermissionStatus.setTextColor(
-                ContextCompat.getColor(this, android.R.color.holo_green_light)
-            )
-            btnPermissionFix.visibility = View.GONE
-        } else {
-            tvPermissionStatus.text = "Permissions: Not granted"
-            tvPermissionStatus.setTextColor(ContextCompat.getColor(this, R.color.pink))
-            btnPermissionFix.visibility = View.VISIBLE
-            btnPermissionFix.text =
-                if (isPermanentlyDenied()) "Settings Kholo" else "Allow Karo"
         }
     }
 
@@ -397,7 +258,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- Download flow ----------
+    // ---------- Download flow (no permission needed) ----------
 
     private fun startDownloadFlow(fileUrl: String?, ext: String, label: String, type: String) {
         val video = currentVideo
@@ -408,13 +269,7 @@ class MainActivity : AppCompatActivity() {
         val safeId = video.id.ifEmpty { System.currentTimeMillis().toString() }
         val fileName = "PVV_" + safeId + "_" + System.currentTimeMillis() + "." + ext
         pendingDownload = PendingDownload(fileUrl, fileName, label, type)
-        if (isPermissionGranted()) {
-            startDownload()
-        } else if (isPermanentlyDenied()) {
-            showGoToSettingsDialog()
-        } else {
-            showPermissionExplainer()
-        }
+        startDownload()
     }
 
     private fun startDownload() {
@@ -561,19 +416,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun retryDownload() {
-        if (isPermissionGranted()) {
-            startDownload()
-        } else if (isPermanentlyDenied()) {
-            showGoToSettingsDialog()
-        } else {
-            showPermissionExplainer()
-        }
+        startDownload()
     }
 
     // ---------- Helpers ----------
 
     private fun refreshHistory() {
-        historyAdapter.update(HistoryStore.load(this))
+        val items = HistoryStore.load(this)
+        historyAdapter.update(items)
+        tvEmptyHistory.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun showStatus(msg: String) {

@@ -1,14 +1,16 @@
 # PRIME VID VAULT — TikTok Downloader (Native Android App)
 
 Native Android app. TikTok link paste karo → video fetch hoti hai (free tikwm API) →
-permission popup → download → video seedha Gallery me save.
+download dabao → video seedha Gallery me save. **Koi permission nahi chahiye:**
+Android 10+ pe system DownloadManager khud public Downloads folder me save karta
+hai, isliye app koi storage/media permission nahi mangti.
 
 ## Features
 - TikTok link paste + clipboard auto-fill / auto-fetch
 - Cover, creator, title, views/likes/comments/shares preview
 - 5 download options: No-Watermark HD, No-Watermark, With Watermark, MP3 Audio, Cover Image
-- Pehli download par permission popup (app dialog + Android system permission)
-- DownloadManager se download + MediaScanner scan, taaki video turant Gallery me dikhe
+- DownloadManager se download + live progress % + Saved/Failed status app ke andar
+- MediaScanner scan, taaki video turant Gallery me dikhe
 - Download history (Your Vault) — SharedPreferences me save, delete / clear support
 
 ## APK kaise banayein (Android Studio)
