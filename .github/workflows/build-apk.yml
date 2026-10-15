@@ -3,7 +3,11 @@ name: Build APK
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -31,3 +35,26 @@ jobs:
         with:
           name: prime-vid-vault-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+  # When a version tag like v3.1 is pushed, publish a public GitHub Release
+  # with the APK attached. The in-app updater and the download page both
+  # point at the latest release, so users always get the newest build.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: prime-vid-vault-apk
+          path: apk
+
+      - name: Rename APK (stable download URL)
+        run: mv apk/app-debug.apk apk/prime-vid-vault.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apk/prime-vid-vault.apk
+          generate_release_notes: true

@@ -640,6 +640,16 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <Button
+            android:id="@+id/btnCheckUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/btn_secondary"
+            android:text="Check for Updates"
+            android:textAllCaps="false"
+            android:textColor="@color/text" />
+
         <!-- History -->
         <TextView
             android:layout_width="wrap_content"
@@ -700,7 +710,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center"
-            android:text="PRIME VID VAULT v3.0 • Videos save to Downloads / PrimeVidVault"
+            android:text="PRIME VID VAULT v3.1 • Videos save to Downloads / PrimeVidVault"
             android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>

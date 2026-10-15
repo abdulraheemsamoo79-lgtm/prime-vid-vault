@@ -27,18 +27,23 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 import java.net.URL
 
 /**
- * PRIME VID VAULT v3.0 — Aurora UI + Share-to-app
+ * PRIME VID VAULT v3.1 — Aurora UI + Share-to-app + In-app updater
  *
  * Dark premium theme: deep black + midnight navy, violet → cyan gradient.
  * Bold gradient hero, unified input pill, card-grid download options.
  * Share target: the app appears in TikTok's Share sheet (ACTION_SEND);
  * tapping it opens the app, asks "Do you want to download this video?",
  * and downloads the No-Watermark HD version on confirmation.
+ * In-app updater: checks version.json on GitHub (max once a day, plus a
+ * manual button); on a newer version it downloads the APK itself and opens
+ * the system installer — users never re-download manually.
  * History persists until the user deletes it manually — nothing auto-removed.
  * No permission is needed: on Android 10+ the system DownloadManager saves to
  * the public Downloads folder on the app's behalf, and MediaScanner makes the
@@ -78,6 +83,7 @@ class MainActivity : AppCompatActivity() {
     private var currentVideo: VideoInfo? = null
     private var pendingDownload: PendingDownload? = null
     private var pendingDownloadId: Long = -1L
+    private var updateDownloadId: Long = -1L
     private lateinit var historyAdapter: HistoryAdapter
     private val progressHandler = Handler(Looper.getMainLooper())
     private var progressRunnable: Runnable? = null
@@ -93,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
             if (id == pendingDownloadId) onDownloadComplete(id)
+            else if (id == updateDownloadId) onUpdateDownloaded()
         }
     }
 
@@ -197,6 +204,15 @@ class MainActivity : AppCompatActivity() {
                 )
                 tvHeroAccent.invalidate()
             }
+        }
+
+        // v3.1: in-app updater — auto-check once a day, manual button anytime.
+        findViewById<Button>(R.id.btnCheckUpdate).setOnClickListener {
+            checkForUpdates(manual = true)
+        }
+        if (UpdateChecker.shouldAutoCheck(this)) {
+            UpdateChecker.markChecked(this)
+            checkForUpdates(manual = false)
         }
     }
 
@@ -608,6 +624,92 @@ class MainActivity : AppCompatActivity() {
 
     private fun retryDownload() {
         startDownload()
+    }
+
+    // ---------- In-app updater (v3.1+) ----------
+
+    private fun checkForUpdates(manual: Boolean) {
+        UpdateChecker.check(this, BuildConfig.VERSION_CODE) { info ->
+            if (info != null) {
+                showUpdateDialog(info)
+            } else if (manual) {
+                Toast.makeText(this, "You're on the latest version", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showUpdateDialog(info: UpdateChecker.UpdateInfo) {
+        val msg = (if (info.changelog.isNotEmpty()) info.changelog + "\n\n" else "") +
+            "Download and install v" + info.versionName + " now?"
+        AlertDialog.Builder(this)
+            .setTitle("Update available")
+            .setMessage(msg)
+            .setPositiveButton("Update") { _, _ -> downloadUpdate(info) }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
+    private fun downloadUpdate(info: UpdateChecker.UpdateInfo) {
+        try {
+            val request = DownloadManager.Request(Uri.parse(info.apkUrl))
+                .setTitle("PRIME VID VAULT v" + info.versionName)
+                .setDescription("Downloading update...")
+                .setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+                )
+                .setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    "PrimeVidVault/update.apk"
+                )
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            updateDownloadId = dm.enqueue(request)
+            Toast.makeText(this, "Downloading update...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Update download didn't start: " + e.message,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun onUpdateDownloaded() {
+        val id = updateDownloadId
+        updateDownloadId = -1L
+        if (id < 0) return
+        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val cursor = dm.query(DownloadManager.Query().setFilterById(id))
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                val status = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_STATUS))
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    val uriStr = c.getString(c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI))
+                    val path = uriStr?.let { Uri.parse(it).path }
+                    if (path == null) {
+                        Toast.makeText(this, "Update file not found", Toast.LENGTH_LONG).show()
+                        return
+                    }
+                    val apkUri = FileProvider.getUriForFile(
+                        this,
+                        "com.primevidvault.app.fileprovider",
+                        File(path)
+                    )
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(apkUri, "application/vnd.android.package-archive")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Couldn't open installer", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(this, "Update download failed", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     // ---------- Helpers ----------

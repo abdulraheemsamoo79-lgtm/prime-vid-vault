@@ -5,7 +5,15 @@ press download → the video saves straight to your Gallery. **No permission nee
 on Android 10+, the system DownloadManager saves to the public Downloads folder
 on the app's behalf, so the app never asks for storage/media permission.
 
-## UI — v3.0 Aurora
+## Download
+
+Get the latest APK from
+[GitHub Releases](https://github.com/abdulraheemsamoo79-lgtm/prime-vid-vault/releases)
+or the
+[download page](https://abdulraheemsamoo79-lgtm.github.io/prime-vid-vault/)
+(enable Pages from the `docs/` folder in repo Settings first).
+
+## UI — v3.1 Aurora
 
 Premium dark theme: deep black + midnight navy, electric violet → cyan
 gradient CTAs, dark glass cards, gradient logo mark, gradient download
@@ -40,6 +48,14 @@ New in v3.0:
    `.github/workflows/build-apk.yml` runs automatically on every push.
 2. Repo → Actions tab → latest run → Artifacts → `prime-vid-vault-apk` → unzip.
 3. Install `app-debug.apk` on your phone (allow "Install unknown apps" when asked).
+
+## Public releases (auto)
+
+Push a version tag (e.g. `git tag v3.1 && git push origin v3.1`) and the
+workflow builds the APK and publishes a public **GitHub Release** with
+`prime-vid-vault.apk` attached — the download page and the in-app updater
+both point at the latest release, so users always get the newest build
+without manual re-downloads.
 
 ## Build the APK (Android Studio)
 1. Install Android Studio (latest) — JDK comes bundled with it.

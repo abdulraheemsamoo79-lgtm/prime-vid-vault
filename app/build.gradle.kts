@@ -11,8 +11,12 @@ android {
         applicationId = "com.primevidvault.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 8
-        versionName = "3.0"
+        versionCode = 9
+        versionName = "3.1"
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
