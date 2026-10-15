@@ -5,7 +5,7 @@ press download → the video saves straight to your Gallery. **No permission nee
 on Android 10+, the system DownloadManager saves to the public Downloads folder
 on the app's behalf, so the app never asks for storage/media permission.
 
-## UI — v2.0 Legendary
+## UI — v3.0 Aurora
 
 Premium dark theme: deep black + midnight navy, electric violet → cyan
 gradient CTAs, dark glass cards, gradient logo mark, gradient download
@@ -13,13 +13,25 @@ progress bar, smooth animations (layout transitions, card fade+slide entrance,
 cover/avatar fade-in, animated progress, ripple press feedback, smooth scroll
 to the result card).
 
+New in v3.0:
+- Bold gradient hero — "Download anything."
+- Unified input pill (link field + Paste in one bar) + full-width Fetch button
+- Download options as a 2-column card grid, HD option highlighted with badge
+- Play-button overlay on the cover thumbnail
+- Share-to-app tip banner
+- Download history now persists until YOU delete it — nothing auto-removed
+
 ## Features
 - TikTok link paste + clipboard auto-fill / auto-fetch
+- **Share-to-app:** PRIME VID VAULT appears in TikTok's Share sheet — tap it,
+  confirm "Do you want to download this video?", and the No-Watermark HD
+  video downloads automatically. No link copying needed.
 - Cover, creator avatar, name, @username, title, duration, views/likes/comments/shares preview
 - 5 download options: No-Watermark HD, No-Watermark, With Watermark, MP3 Audio, Cover Image
 - DownloadManager download + live progress % + Saved/Failed status inside the app
 - MediaScanner scan, so the video shows in Gallery immediately
-- Download history (Recent Downloads) — saved in SharedPreferences, delete / clear support
+- Download history (Recent Downloads) — saved in SharedPreferences, persists
+  until you delete it; per-item delete + clear-all support
 - Quick actions: Copy Caption, Open in TikTok, Share Link
 - Fully English UI
 

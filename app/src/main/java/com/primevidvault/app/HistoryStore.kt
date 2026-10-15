@@ -12,7 +12,9 @@ data class HistoryItem(
     val date: Long
 )
 
-/** Download history + permission flag, stored in SharedPreferences. */
+/** Download history, stored in SharedPreferences.
+ *  Entries persist until the user deletes them manually — nothing is
+ *  auto-removed. */
 object HistoryStore {
     private const val PREFS = "prime_vid_vault"
     private const val KEY_HISTORY = "history"
@@ -40,7 +42,7 @@ object HistoryStore {
     fun add(context: Context, item: HistoryItem) {
         val list = load(context)
         list.add(0, item)
-        if (list.size > 50) list.subList(50, list.size).clear()
+        // No auto-delete: history stays until the user removes it manually.
         save(context, list)
     }
 

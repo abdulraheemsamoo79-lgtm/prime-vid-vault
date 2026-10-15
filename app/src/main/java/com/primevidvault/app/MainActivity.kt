@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.BitmapFactory
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -23,15 +25,21 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.net.URL
 
 /**
- * PRIME VID VAULT v2.0 — Legendary UI
+ * PRIME VID VAULT v3.0 — Aurora UI + Share-to-app
  *
  * Dark premium theme: deep black + midnight navy, violet → cyan gradient.
+ * Bold gradient hero, unified input pill, card-grid download options.
+ * Share target: the app appears in TikTok's Share sheet (ACTION_SEND);
+ * tapping it opens the app, asks "Do you want to download this video?",
+ * and downloads the No-Watermark HD version on confirmation.
+ * History persists until the user deletes it manually — nothing auto-removed.
  * No permission is needed: on Android 10+ the system DownloadManager saves to
  * the public Downloads folder on the app's behalf, and MediaScanner makes the
  * file visible in Gallery. So downloads run directly — no permission popups,
@@ -175,6 +183,68 @@ class MainActivity : AppCompatActivity() {
         }
 
         autofillFromClipboard()
+        handleShareIntent(intent)
+
+        // v3 Aurora: gradient headline — "anything." in violet → cyan.
+        val tvHeroAccent: TextView = findViewById(R.id.tvHeroAccent)
+        tvHeroAccent.post {
+            val w = tvHeroAccent.paint.measureText(tvHeroAccent.text.toString())
+            if (w > 0) {
+                tvHeroAccent.paint.shader = LinearGradient(
+                    0f, 0f, w, tvHeroAccent.textSize,
+                    intArrayOf(0xFF8B5CF6.toInt(), 0xFF22D3EE.toInt()),
+                    null, Shader.TileMode.CLAMP
+                )
+                tvHeroAccent.invalidate()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShareIntent(intent)
+    }
+
+    // ---------- Share-to-app (TikTok Share sheet -> PRIME VID VAULT) ----------
+
+    private var autoDownloadOnFetch = false
+
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") return
+        val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+        val link = extractTikTokUrl(sharedText)
+        if (link == null) {
+            Toast.makeText(
+                this,
+                "No TikTok link found in the shared content",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        etLink.setText(link)
+        showShareDownloadDialog(link)
+    }
+
+    private fun extractTikTokUrl(text: String): String? {
+        val urls = Regex("https?://[^\\s]+")
+            .findAll(text)
+            .map { it.value.trimEnd('.', ',', ')', '!', '?') }
+            .toList()
+        return urls.firstOrNull { it.contains("tiktok.com", ignoreCase = true) }
+            ?: urls.firstOrNull()
+    }
+
+    private fun showShareDownloadDialog(link: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Download this video?")
+            .setMessage("Do you want to download this video?")
+            .setPositiveButton("Download") { _, _ ->
+                autoDownloadOnFetch = true
+                fetchVideo()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroy() {
@@ -239,7 +309,15 @@ class MainActivity : AppCompatActivity() {
                 result.onSuccess { info ->
                     currentVideo = info
                     showResult(info)
+                    if (autoDownloadOnFetch) {
+                        autoDownloadOnFetch = false
+                        // User confirmed via the share dialog: download the best
+                        // (No-Watermark HD) version right away. The preview card
+                        // is still shown, so other formats remain one tap away.
+                        startDownloadFlow(info.hdPlayUrl, "mp4", "No-Watermark HD", "Video")
+                    }
                 }.onFailure { e ->
+                    autoDownloadOnFetch = false
                     emptyPreview.visibility = View.VISIBLE
                     showStatus(e.message ?: "Something went wrong. Try again.")
                 }
@@ -293,6 +371,8 @@ class MainActivity : AppCompatActivity() {
         tvStatComments.text = formatCount(info.commentCount) + "\nComments"
         tvStatShares.text = formatCount(info.shareCount) + "\nShares"
         ivCover.setImageResource(android.R.drawable.ic_menu_gallery)
+        val playOverlay: View = findViewById(R.id.playOverlay)
+        playOverlay.visibility = View.VISIBLE
         if (info.cover.isNotEmpty()) {
             Thread {
                 try {
@@ -302,6 +382,7 @@ class MainActivity : AppCompatActivity() {
                             ivCover.alpha = 0f
                             ivCover.setImageBitmap(bmp)
                             ivCover.animate().alpha(1f).setDuration(300).start()
+                            playOverlay.visibility = View.GONE
                         }
                     }
                 } catch (e: Exception) {
