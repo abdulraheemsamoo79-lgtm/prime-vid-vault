@@ -38,10 +38,13 @@ data class CobaltMedia(
  */
 object CobaltClient {
 
+    /** Verified live 2026-10-16 (cobalt 11.7.1, instagram in services).
+     *  Instances churn often — auth/rate/capacity errors fail over to next. */
     private val INSTANCES = listOf(
-        "https://kityune.imput.net",
-        "https://cobalt-backend.canine.tools",
-        "https://cobalt-api.meowing.de"
+        "https://api.cobalt.tools",
+        "https://api.cobalt.rpkiinval.id",
+        "https://cobaltapi.squair.xyz",
+        "https://cobalt-omega.wolfy.love"
     )
     private const val TIMEOUT_MS = 25000
 
