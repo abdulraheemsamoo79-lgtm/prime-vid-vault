@@ -53,7 +53,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="v3  AURORA"
+                    android:text="v4  AURORA"
                     android:textColor="@color/muted"
                     android:textSize="10sp" />
             </LinearLayout>
@@ -67,6 +67,44 @@
                 android:text="NO WATERMARK"
                 android:textColor="@color/cyan"
                 android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Platform tabs: TikTok | Instagram -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_pill"
+            android:orientation="horizontal"
+            android:padding="4dp">
+
+            <Button
+                android:id="@+id/tabTikTok"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/btn_primary"
+                android:minHeight="0dp"
+                android:padding="10dp"
+                android:text="TikTok"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/tabInstagram"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:minHeight="0dp"
+                android:padding="10dp"
+                android:text="Instagram"
+                android:textAllCaps="false"
+                android:textColor="@color/muted"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -96,6 +134,7 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/tvSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
@@ -162,13 +201,80 @@
             android:textSize="15sp"
             android:textStyle="bold" />
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
+        <!-- Loading skeleton: shimmering placeholder shown while fetching video info -->
+        <LinearLayout
+            android:id="@+id/skeletonCard"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
-            android:visibility="gone" />
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/skeletonInner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="84dp"
+                        android:layout_height="112dp"
+                        android:background="@drawable/bg_skeleton" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <View
+                            android:layout_width="70%"
+                            android:layout_height="14dp"
+                            android:background="@drawable/bg_skeleton" />
+
+                        <View
+                            android:layout_width="45%"
+                            android:layout_height="12dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_skeleton" />
+
+                        <View
+                            android:layout_width="90%"
+                            android:layout_height="12dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_skeleton" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_skeleton" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_skeleton" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvStatus"
@@ -181,6 +287,7 @@
 
         <!-- Feature chips -->
         <LinearLayout
+            android:id="@+id/statsRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
@@ -505,6 +612,7 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/hdBadge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="top|end"
@@ -710,8 +818,19 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center"
-            android:text="PRIME VID VAULT v3.1 • Videos save to Downloads / PrimeVidVault"
+            android:text="PRIME VID VAULT v4.0 • Videos save to Downloads / PrimeVidVault"
             android:textColor="@color/muted"
             android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:text="Powered by AR PRIME"
+            android:textColor="@color/muted"
+            android:textSize="11sp"
+            android:letterSpacing="0.18" />
     </LinearLayout>
 </ScrollView>

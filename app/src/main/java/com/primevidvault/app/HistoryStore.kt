@@ -9,7 +9,8 @@ data class HistoryItem(
     val title: String,
     val cover: String,
     val type: String,
-    val date: Long
+    val date: Long,
+    val platform: String = "tiktok"
 )
 
 /** Download history, stored in SharedPreferences.
@@ -32,7 +33,8 @@ object HistoryStore {
                     title = o.optString("title"),
                     cover = o.optString("cover"),
                     type = o.optString("type"),
-                    date = o.optLong("date")
+                    date = o.optLong("date"),
+                    platform = o.optString("platform", "tiktok")
                 )
             )
         }
@@ -64,6 +66,7 @@ object HistoryStore {
             o.put("cover", item.cover)
             o.put("type", item.type)
             o.put("date", item.date)
+            o.put("platform", item.platform)
             arr.put(o)
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

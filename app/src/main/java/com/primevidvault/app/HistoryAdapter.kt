@@ -18,6 +18,7 @@ class HistoryAdapter(
 
     class Holder(v: View) : RecyclerView.ViewHolder(v) {
         val tvTitle: TextView = v.findViewById(R.id.tvItemTitle)
+        val tvBadge: TextView = v.findViewById(R.id.tvItemBadge)
         val tvMeta: TextView = v.findViewById(R.id.tvItemMeta)
         val btnRe: Button = v.findViewById(R.id.btnItemRedownload)
         val btnDel: Button = v.findViewById(R.id.btnItemDelete)
@@ -33,6 +34,16 @@ class HistoryAdapter(
         val item = items[position]
         holder.tvTitle.text =
             if (item.title.length > 60) item.title.substring(0, 60) + "..." else item.title
+        // Platform badge: TikTok (cyan chip) vs Instagram (gradient chip).
+        val ig = item.platform == "instagram"
+        holder.tvBadge.text = if (ig) "INSTAGRAM" else "TIKTOK"
+        holder.tvBadge.setBackgroundResource(
+            if (ig) R.drawable.bg_chip_ig else R.drawable.bg_chip
+        )
+        holder.tvBadge.setTextColor(
+            if (ig) 0xFFFFFFFF.toInt()
+            else holder.itemView.context.getColor(R.color.cyan)
+        )
         val date = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
             .format(Date(item.date))
         holder.tvMeta.text = item.type + " • " + date
