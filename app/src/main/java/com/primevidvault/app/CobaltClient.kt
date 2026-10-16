@@ -38,8 +38,11 @@ data class CobaltMedia(
  */
 object CobaltClient {
 
-    /** Verified live 2026-10-16 (cobalt 11.7.1, instagram in services).
-     *  Instances churn often — auth/rate/capacity errors fail over to next. */
+    /** Verified 2026-10-16 (cobalt 11.7.1, instagram in services), but all four
+     *  now gate the API behind keys/Turnstile: unauthenticated requests fail
+     *  with auth error codes or bare HTTP 400/401/403. Failover still runs,
+     *  but fetch() now reports a clear message instead of "HTTP 400" when
+     *  every instance is auth-gated. */
     private val INSTANCES = listOf(
         "https://api.cobalt.tools",
         "https://api.cobalt.rpkiinval.id",
@@ -65,9 +68,23 @@ object CobaltClient {
         "error.api.service.unsupported"
     )
 
+    /** Failover codes that mean "this instance needs auth" — when every
+     *  instance answers this way (or with a bare HTTP 400/401/403), the whole
+     *  free-server fleet is gated and we say so plainly. */
+    private val AUTH_CODES = setOf(
+        "error.api.auth.jwt.missing",
+        "error.api.auth.key.invalid",
+        "error.api.auth.turnstile.missing"
+    )
+
+    /** Message shown when Instagram's free servers all require an API key. */
+    const val AUTH_GATED_MESSAGE =
+        "Instagram's free servers now need an API key, so Instagram downloads are paused. The TikTok tab still works."
+
     fun fetch(pageUrl: String): Result<CobaltMedia> {
         var lastError: Exception =
             Exception("Couldn't reach the download servers. Try again.")
+        var authGated = 0
         for (base in INSTANCES) {
             try {
                 return Result.success(resolve(base, pageUrl))
@@ -75,9 +92,23 @@ object CobaltClient {
                 return Result.failure(e)
             } catch (e: Exception) {
                 lastError = e
+                if (isAuthGated(e)) authGated++
             }
         }
-        return Result.failure(lastError)
+        return if (authGated == INSTANCES.size) {
+            Result.failure(Exception(AUTH_GATED_MESSAGE))
+        } else {
+            Result.failure(lastError)
+        }
+    }
+
+    /** True when the failure means "this server wants an API key". */
+    private fun isAuthGated(e: Exception): Boolean {
+        if (e !is FailoverException) return false
+        val msg = e.message.orEmpty()
+        if (msg in AUTH_CODES) return true
+        // Gated instances often reject with a bare 4xx before sending JSON.
+        return msg == "HTTP 400" || msg == "HTTP 401" || msg == "HTTP 403"
     }
 
     private fun resolve(base: String, pageUrl: String): CobaltMedia {

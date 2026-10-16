@@ -410,7 +410,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                val result = CobaltClient.fetch(link)
+                val result = RapidApiClient.fetch(link)
                 runOnUiThread {
                     skeletonInner.clearAnimation()
                     skeletonCard.visibility = View.GONE
