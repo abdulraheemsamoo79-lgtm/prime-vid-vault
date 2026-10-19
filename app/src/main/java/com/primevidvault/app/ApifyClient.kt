@@ -9,17 +9,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Instagram downloads via the user's Apify actor.
- * POST https://api.apify.com/v2/acts/snapinst~instagram-downloader-api/run-sync-get-dataset-items
+ * Instagram downloads via the Apify Instagram Post Scraper actor.
+ * POST https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items
  * Headers: Content-Type: application/json, Authorization: Bearer <token>
- * Body: {"url": "<instagram-url>"}
+ * Body: {"directUrls": ["<instagram-url>"]}
  * Response: JSON array of dataset items (run-sync-get-dataset-items).
  * Reuses CobaltMedia so the Instagram UI needs no changes.
  */
 object ApifyClient {
 
     private const val ENDPOINT =
-        "https://api.apify.com/v2/acts/snapinst~instagram-downloader-api/run-sync-get-dataset-items"
+        "https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items"
 
     // ================================================================
     //  ▼▼▼  PASTE YOUR APIFY API TOKEN BETWEEN THE QUOTES BELOW  ▼▼▼
@@ -32,7 +32,7 @@ object ApifyClient {
     //  NOTE: anyone who extracts this APK can read the token, so set
     //  usage limits on your Apify account.
     // ================================================================
-    private const val APIFY_TOKEN = "apify_api_OPB5eB0MTZfuLNm0BGXNyphyBthRY31gf1W1"
+    private const val APIFY_TOKEN = "apify_api_RzPbwjznRDbgc6XiddjXxm999IhvIf0q2lXf"
 
     /** Actor runs take a while — give it up to 2 minutes. */
     private const val TIMEOUT_MS = 120000
@@ -76,7 +76,8 @@ object ApifyClient {
                             if (candidate.isNotEmpty()) videoUrl = candidate
                         }
                     }
-                    type.contains("image") || type.contains("photo") || type.contains("carousel") -> {
+                    type.contains("image") || type.contains("photo") ||
+                            type.contains("carousel") || type.contains("sidecar") -> {
                         val p = img.ifEmpty { genericUrl }
                         if (p.isNotEmpty()) photos.add(p)
                     }
@@ -123,7 +124,10 @@ object ApifyClient {
     /** POSTs to the actor and returns the dataset items array (handles a
      *  wrapped object too, in case the actor nests items). */
     private fun postForItems(pageUrl: String): JSONArray {
-        val body = JSONObject().put("url", pageUrl).toString()
+        val body = JSONObject()
+            .put("directUrls", JSONArray().put(pageUrl))
+            .put("resultsLimit", 1)
+            .toString()
         val conn = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = TIMEOUT_MS
