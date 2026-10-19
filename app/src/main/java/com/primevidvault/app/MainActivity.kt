@@ -410,7 +410,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                val result = RapidApiClient.fetch(link)
+                val result = ApifyClient.fetch(link)
                 runOnUiThread {
                     skeletonInner.clearAnimation()
                     skeletonCard.visibility = View.GONE
