@@ -12,7 +12,7 @@ import java.net.URL
  * Instagram downloads via the Apify Instagram Post Scraper actor.
  * POST https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items
  * Headers: Content-Type: application/json, Authorization: Bearer <token>
- * Body: {"directUrls": ["<instagram-url>"]}
+ * Body: {"username": ["<instagram-url>"], "resultsLimit": 1}
  * Response: JSON array of dataset items (run-sync-get-dataset-items).
  * Reuses CobaltMedia so the Instagram UI needs no changes.
  */
@@ -125,7 +125,7 @@ object ApifyClient {
      *  wrapped object too, in case the actor nests items). */
     private fun postForItems(pageUrl: String): JSONArray {
         val body = JSONObject()
-            .put("directUrls", JSONArray().put(pageUrl))
+            .put("username", JSONArray().put(pageUrl))
             .put("resultsLimit", 1)
             .toString()
         val conn = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
