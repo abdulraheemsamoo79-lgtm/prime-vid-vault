@@ -410,7 +410,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                val result = ApifyClient.fetch(link)
+                val result = VexoraApiClient.fetch(link)
                 runOnUiThread {
                     skeletonInner.clearAnimation()
                     skeletonCard.visibility = View.GONE
